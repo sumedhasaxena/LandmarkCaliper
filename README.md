@@ -1,2 +1,1 @@
-# LandmarkCaliper
-Hand Landmark Measurements
+# HandJointsDetection

@@ -1,0 +1,15 @@
+{
+  "app_config": 
+  {
+    "a4_width_cms":                             21.0,
+    "a4_height_cms":                            29.7,
+    "landmark_model_path":                      "../lib/hand_landmarker.task",
+    "landmark_model_confidence_threshold":      0.7,
+    "landmark_mapping_file":                    "../data/landmark_mappings/landmark_mappings.csv",
+    "hand_measurement_file":                    "../data/landmark_mappings/hand_measurements.csv",
+    "hand_display_landmark_file":               "../data/landmark_mappings/hand_display_landmarks.csv",
+    "measurement_model_type":                   "A4_CONTOURS",
+    "app_log_file":                             "../log/landmark_log_{time}.log",
+    "disable_notebook_log":                     true
+  }
+}
