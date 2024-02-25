@@ -1,1 +1,1 @@
-# HandJointsDetection
+# Hand Landmark Measurements
