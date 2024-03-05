@@ -8,6 +8,7 @@ from typing import NamedTuple
 from loguru import logger
 from beartype import beartype
 from IPython.display import display
+from PIL import Image, ImageDraw, ImageFont
 #from tabulate import tabulate
 
 import matplotlib 
@@ -83,7 +84,7 @@ class LandmarkCaliper(object):
     @beartype
     def init_model(self) -> None: 
 
-        logger.info("Initialising landmark detecton model...")
+        logger.info("Initialising landmark detection model...")
 
         landmark_model_path     = self.config.get_landmark_model_path()
         confidence_threshold    = self.config.get_landmark_model_confidence_threshold()
@@ -307,14 +308,22 @@ class LandmarkCaliper(object):
         image_name = get_file_name(self.image_file)
         
         max_length, max_landmarks = self.measurement_model.get_max_hand_length()
-            
-        plt.figure(figsize = fig_size)
-        plt.imshow(image)
-        plt.title(f'Landmark measurements (cm): {hand_type} Hand, {image_name}, Length: {max_length}cm b/w {max_landmarks[0]} to {max_landmarks[1]}')
+        img_text = f'Landmark measurements (cm): {hand_type} Hand, {image_name}, Length: {max_length}cm b/w {max_landmarks[0]} to {max_landmarks[1]}'
 
-        plt.savefig(file_name)
-            
-        plt.close()
+        # using matplotlib library
+        # plt.figure(figsize = fig_size)
+        # plt.imshow(image)
+        # plt.title(img_text)
+        #
+        # plt.savefig(file_name)
+        #
+        # plt.close()
+
+        #using Pillow library
+        img = Image.fromarray(image)
+        imdraw = ImageDraw.Draw(img)
+        imdraw.text((90, 10), img_text, fill=(0, 0, 255))
+        img.save(file_name)
 
 
     @beartype

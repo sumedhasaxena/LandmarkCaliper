@@ -9,6 +9,8 @@ from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.vision.hand_landmarker import HandLandmarker
 from mediapipe.tasks.python.vision.hand_landmarker import HandLandmarkerResult
+from mediapipe import solutions
+from mediapipe.framework.formats import landmark_pb2
 
 sys.path.append("../lib/")
 
@@ -119,3 +121,24 @@ class HandLandmarkerModel(object):
         logger.error(f'{os.path.exists(full_path)}, {os.path.isfile(full_path)}, {full_path}')
         
         return False
+
+    def draw_landmarks_on_image(image, detection_result):
+        hand_landmarks_list = detection_result.hand_landmarks
+        annotated_image = np.copy(image)
+
+        # Loop through the detected hands to visualize.
+        for idx in range(len(hand_landmarks_list)):
+            hand_landmarks = hand_landmarks_list[idx]
+            # Draw the hand landmarks.
+            hand_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
+            hand_landmarks_proto.landmark.extend([
+                landmark_pb2.NormalizedLandmark(x=landmark.x, y=landmark.y, z=landmark.z) for landmark in hand_landmarks
+            ])
+            solutions.drawing_utils.draw_landmarks(
+                annotated_image,
+                hand_landmarks_proto,
+                solutions.hands.HAND_CONNECTIONS,
+                solutions.drawing_styles.get_default_hand_landmarks_style(),
+                solutions.drawing_styles.get_default_hand_connections_style())
+
+        return annotated_image
