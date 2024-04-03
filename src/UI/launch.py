@@ -9,11 +9,13 @@ from src.model.landmarkcaliper import LandmarkCaliper
 
 class LaunchApp(QMainWindow):
     image_file_path = ""
+    output_files = []
 
     def __init__(self):
         super().__init__()
 
-        uic.loadUi("Layout.ui", self)
+        #uic.loadUi("Layout.ui", self)
+        uic.loadUi("Layout2.ui", self)
 
         self.imageViewer.setScaledContents(True)
         self.setMaximumHeight(self.get_max_window_height())
@@ -24,6 +26,8 @@ class LaunchApp(QMainWindow):
 
         self.open_file_dialog_button.clicked.connect(self.open_file_dialog)
         self.run_detection_button.clicked.connect(self.run_detection)
+        self.showLandmarksButton.clicked.connect(self.showLandmarksImage)
+        self.showDetailsButton.clicked.connect(self.showDetailedImage)
         self.show()
 
     def open_file_dialog(self):
@@ -57,10 +61,20 @@ class LaunchApp(QMainWindow):
     def run_detection(self):
         patientId = self.patientId.toPlainText()
         patientName = self.patientName.toPlainText()
-        output_files = self.run_model()
-        landmark_image = output_files[2]
+        self.output_files = self.run_model()
+        landmark_image = self.output_files[4]
         self.display_image(landmark_image)
-        self.message.setText(f'Detection finished for {patientName}. \n\n Image with landmarks with measurements saved at : {landmark_image} \n\n File with measurements saved at: {output_files[1]}')
+        self.showLandmarksButton.checked = True
+        self.message.setText(f'Detection finished for {patientName} with Id: {patientId}. \n\n The measurement data and images were saved.')
+
+    def showLandmarksImage(self):
+        landmark_image = self.output_files[4]
+        self.display_image(landmark_image)
+
+    def showDetailedImage(self):
+        detailImage = self.output_files[2]
+        self.display_image(detailImage)
+
 
 
 if __name__ == '__main__':

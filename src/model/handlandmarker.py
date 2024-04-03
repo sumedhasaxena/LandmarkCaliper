@@ -122,7 +122,7 @@ class HandLandmarkerModel(object):
         
         return False
 
-    def draw_landmarks_on_image(image, detection_result):
+    def draw_landmark_annotations_on_image(self, image, detection_result):
         hand_landmarks_list = detection_result.hand_landmarks
         annotated_image = np.copy(image)
 

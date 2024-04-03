@@ -113,7 +113,7 @@ def get_landmark_measurement_file_name(input_image_file : str, hand_type : str, 
     return output_file
 
 @beartype
-def get_landmark_display_file_name(input_image_file : str, hand_type : str, output_dir = None) -> str:
+def get_coordinate_display_file_name(input_image_file : str, hand_type : str, output_dir = None) -> str:
 
     if output_dir is None:
         output_dir = get_output_dir(input_image_file)
@@ -124,7 +124,7 @@ def get_landmark_display_file_name(input_image_file : str, hand_type : str, outp
 
     file_suffix = get_file_extn(input_image_file)
 
-    output_file = f'{output_dir}/{file_prefix}_{hand_type.lower()}_landmarks{file_suffix}'
+    output_file = f'{output_dir}/{file_prefix}_{hand_type.lower()}_coordinates{file_suffix}'
 
     return output_file
 
@@ -141,6 +141,22 @@ def get_contours_display_file_name(input_image_file : str, hand_type : str, outp
     file_suffix = get_file_extn(input_image_file)
 
     output_file = f'{output_dir}/{file_prefix}_{hand_type.lower()}_contours{file_suffix}'
+
+    return output_file
+
+
+@beartype
+def get_landmark_display_file_name(input_image_file : str, hand_type : str,output_dir = None) -> str:
+    if output_dir is None:
+        output_dir = get_output_dir(input_image_file)
+
+    check_create_dir(output_dir)
+
+    file_prefix = get_file_stem(input_image_file)
+
+    file_suffix = get_file_extn(input_image_file)
+
+    output_file = f'{output_dir}/{file_prefix}_{hand_type.lower()}_landmarks{file_suffix}'
 
     return output_file
 

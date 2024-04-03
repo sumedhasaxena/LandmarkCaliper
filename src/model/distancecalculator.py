@@ -177,8 +177,9 @@ class DistanceCalculator(ABC):
     def get_hand_type(self) -> str:
         
         handedness = self.model_result.handedness[0][0]
+        return handedness.display_name
 
-        return "LEFT" if handedness.category_name == "Right" else "RIGHT"
+        #"LEFT" if handedness.category_name == "Right" else "RIGHT"
     
 
     @beartype

@@ -66,6 +66,7 @@ class ScalingDistanceCalculator(DistanceCalculator):
 
         distance *= self.scaling_factor
 
+
         # round upto millimeter
         return round(distance, 3)
     
