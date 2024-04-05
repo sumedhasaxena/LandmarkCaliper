@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="default_image_background">
+    <file>upload_image_template.jpg</file>
+  </qresource>
+</RCC>

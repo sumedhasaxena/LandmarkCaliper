@@ -120,9 +120,11 @@ class LandmarkCaliper(object):
 
         output_image, landmark_result = self.landmark_model.detect_img_file(image_file)
 
-        self.measurement_model.init(output_image, landmark_result)
-
-        self.measurement_files = self.save_measurements()
+        if len(landmark_result.handedness) != 0:
+            self.measurement_model.init(output_image, landmark_result)
+            self.measurement_files = self.save_measurements()
+        else:
+            logger.error('Cannot initialise measurement model as no results were returned from detection')
 
     @beartype
     def show_measurement_details(self, show_hand=True) -> None:
@@ -145,8 +147,9 @@ class LandmarkCaliper(object):
         if self.measurement_files is not None:
             print(f'\n1. Hand Measurement File: {self.measurement_files[0]} \n')
             print(f'2. Landmark Measurement File: {self.measurement_files[1]} \n')
-            print(f'3. Landmark Image File: {self.measurement_files[2]} \n')
+            print(f'3. Coordinates Image File: {self.measurement_files[2]} \n')
             print(f'4. Contour Image File: {self.measurement_files[3]}\n')
+            print(f'4. Landmarks Image File: {self.measurement_files[3]}\n')
 
     @beartype
     def show_hand_coordinates_image(self, show_pixel_distance=False, fig_size=(10, 15)) -> None:
@@ -247,7 +250,10 @@ class LandmarkCaliper(object):
     @beartype
     def get_measurement_files(self) -> list[str]:
 
-        return self.measurement_files
+        if self.measurement_files is None or len(self.measurement_files) == 0:
+            return []
+        else:
+            return self.measurement_files
 
     @beartype
     def save_a4_contours_image(self, file_name) -> None:
@@ -322,8 +328,19 @@ class LandmarkCaliper(object):
     @beartype
     def save_landmark_display_image(self, file_name: str) -> None:
         image = self.landmark_model.draw_landmark_annotations_on_image(self.measurement_model.image, self.measurement_model.model_result)
+        self.draw_landmark_Id(image)
         img = Image.fromarray(image)
         img.save(file_name)
+
+    @beartype
+    def draw_landmark_Id(self, image):
+
+        landmark_ids = self.measurement_model.get_landmark_ids()
+        for landmark_id in landmark_ids:
+            x, y, z = self.measurement_model.get_landmark_image_cordinates(landmark_id)
+            text = f"{landmark_id}"
+            cv2.putText(image, text, (x+2, y+1), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255,255,255), 1, cv2.LINE_AA)
+
 
     @beartype
     def draw_hand_coordinates_and_distance(self, show_pixel_distance=False) -> np.ndarray:
@@ -333,14 +350,16 @@ class LandmarkCaliper(object):
 
         coordinate_color = (0, 0, 0)
         distance_color = (8, 24, 168)
-        font_size = 0.5
+        coordinate_font_size = 0.35
+        distance_font_size = 0.45
 
         for landmark_id in landmark_ids:
             x, y, z = self.measurement_model.get_landmark_image_cordinates(landmark_id)
 
-            text = f"{landmark_id}: ({x},{y})"
+            #text = f"{landmark_id}: ({x},{y})"
+            text = f"({x},{y})"
 
-            cv2.putText(image, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, 0.5, coordinate_color, 1, cv2.LINE_AA)
+            cv2.putText(image, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, coordinate_font_size, coordinate_color, 1, cv2.LINE_AA)
 
         # show landmarks distances on image
         display_landmarks = self.hand_display_landmarks
@@ -357,11 +376,12 @@ class LandmarkCaliper(object):
             pixel_distance = int(self.measurement_model._get_vector_distance(x1, y1, 0, x2, y2, 0))
 
             ##text = f'{pixel_distance}px, {distance}cm' if show_pixel_distance else f'{landmark1_id}-{landmark2_id}: {round(distance, 1)}cm'
-            text = f'{pixel_distance}px, {distance}cm' if show_pixel_distance else f'{landmark1_id}-{landmark2_id}:{round(distance, 1)}cm'
+            #text = f'{pixel_distance}px, {distance}cm' if show_pixel_distance else f'{landmark1_id}-{landmark2_id}:{round(distance, 1)}cm'
+            text = f'{pixel_distance}px, {distance}cm' if show_pixel_distance else f'{round(distance, 1)}cm'
 
             x = int(0.5 * (x1 + x2))
             y = int(0.5 * (y1 + y2))
 
-            cv2.putText(image, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, font_size, distance_color, 1, cv2.LINE_AA)
+            cv2.putText(image, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, distance_font_size, distance_color, 1, cv2.LINE_AA)
 
         return image

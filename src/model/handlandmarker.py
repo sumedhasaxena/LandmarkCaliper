@@ -82,7 +82,7 @@ class HandLandmarkerModel(object):
 
         result = self.run_model(image)
 
-        return (image, result) 
+        return image, result
     
     @beartype
     def run_model(self, image : mpipe.Image) -> HandLandmarkerResult:
@@ -103,9 +103,11 @@ class HandLandmarkerModel(object):
 
         result = self.model.detect(image)
 
-        hand = result.handedness[0][0]
-
-        logger.info(f'Detected landmarks. Category: {hand.category_name}, Confidence: {round(hand.score * 100, 2)}')
+        if len(result.handedness) == 0:
+            logger.error('No result was returned from detection model')
+        else:
+            hand = result.handedness[0][0]
+            logger.info(f'Detected landmarks. Category: {hand.category_name}, Confidence: {round(hand.score * 100, 2)}')
 
         return result
     
