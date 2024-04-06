@@ -121,7 +121,7 @@ class LandmarkCaliper(object):
         output_image, landmark_result = self.landmark_model.detect_img_file(image_file)
 
         if len(landmark_result.handedness) != 0:
-            self.measurement_model.init(output_image, landmark_result)
+            self.measurement_model.init(output_image, landmark_result, image_file)
             self.measurement_files = self.save_measurements()
         else:
             logger.error('Cannot initialise measurement model as no results were returned from detection')
@@ -341,7 +341,6 @@ class LandmarkCaliper(object):
             text = f"{landmark_id}"
             cv2.putText(image, text, (x+2, y+1), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255,255,255), 1, cv2.LINE_AA)
 
-
     @beartype
     def draw_hand_coordinates_and_distance(self, show_pixel_distance=False) -> np.ndarray:
 
@@ -356,10 +355,11 @@ class LandmarkCaliper(object):
         for landmark_id in landmark_ids:
             x, y, z = self.measurement_model.get_landmark_image_cordinates(landmark_id)
 
-            #text = f"{landmark_id}: ({x},{y})"
+            # text = f"{landmark_id}: ({x},{y})"
             text = f"({x},{y})"
 
-            cv2.putText(image, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, coordinate_font_size, coordinate_color, 1, cv2.LINE_AA)
+            cv2.putText(image, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, coordinate_font_size, coordinate_color, 1,
+                        cv2.LINE_AA)
 
         # show landmarks distances on image
         display_landmarks = self.hand_display_landmarks
@@ -376,7 +376,7 @@ class LandmarkCaliper(object):
             pixel_distance = int(self.measurement_model._get_vector_distance(x1, y1, 0, x2, y2, 0))
 
             ##text = f'{pixel_distance}px, {distance}cm' if show_pixel_distance else f'{landmark1_id}-{landmark2_id}: {round(distance, 1)}cm'
-            #text = f'{pixel_distance}px, {distance}cm' if show_pixel_distance else f'{landmark1_id}-{landmark2_id}:{round(distance, 1)}cm'
+            # text = f'{pixel_distance}px, {distance}cm' if show_pixel_distance else f'{landmark1_id}-{landmark2_id}:{round(distance, 1)}cm'
             text = f'{pixel_distance}px, {distance}cm' if show_pixel_distance else f'{round(distance, 1)}cm'
 
             x = int(0.5 * (x1 + x2))
