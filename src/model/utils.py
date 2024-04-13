@@ -174,6 +174,17 @@ def get_all_hand_measurements_files(output_dir: str) -> list[str]:
 
 
 @beartype
+def get_image_name_from_hand_measurement_file(file_path: str) -> str:
+
+    file_name = get_file_name(file_path)
+
+    file_name = file_name.replace('_hand_measurements.csv', '')
+
+    return file_name
+
+
+
+@beartype
 def get_hand_physical_measurement_file_name(input_image_file: str, hand_type: str, output_dir=None) -> str:
     if output_dir is None:
         output_dir = get_output_dir(input_image_file)

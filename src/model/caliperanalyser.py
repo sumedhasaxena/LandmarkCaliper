@@ -36,6 +36,9 @@ class CaliperAnalyser(object):
         self.left_hand_distances = pd.DataFrame()
         self.right_hand_distance = pd.DataFrame()
 
+        self.left_hand_error_summary = pd.DataFrame()
+        self.right_hand_error_summary = pd.DataFrame()
+
         self.left_hand_file_name = None
         self.right_hand_file_name = None
 
@@ -75,14 +78,19 @@ class CaliperAnalyser(object):
         lh_merged = self.combine_measurements(lh_measures)
         rh_merged = self.combine_measurements(rh_measures)
 
-        lh_summary, lh_distances = self.summarise_measurements(lh_merged)
-        rh_summary, rh_distance = self.summarise_measurements(rh_merged)
+        lh_error_summary = self.summarise_measurement_errors(lh_measures)
+        rh_error_summary = self.summarise_measurement_errors(rh_measures)
+
+        lh_summary, lh_distances = self.summarise_measurements(lh_merged, lh_error_summary)
+        rh_summary, rh_distance = self.summarise_measurements(rh_merged, rh_error_summary)
 
         self.left_hand_summary = lh_summary
         self.left_hand_distances = lh_distances
+        self.left_hand_error_summary = lh_error_summary
 
         self.right_hand_summary = rh_summary
         self.right_hand_distance = rh_distance
+        self.right_hand_error_summary = rh_error_summary
 
         # save summary
         lh_file, rh_file = self.save_measurements()
@@ -101,7 +109,8 @@ class CaliperAnalyser(object):
 
         if len(self.left_hand_summary) > 0:
 
-            self.show_hand_summary(hand_type, self.left_hand_summary, self.left_hand_distances)
+            self.show_hand_summary(hand_type, self.left_hand_summary, self.left_hand_distances,
+                                   self.left_hand_error_summary)
 
         else:
             print(f'No measurements found for {hand_type} Hand\n')
@@ -110,7 +119,8 @@ class CaliperAnalyser(object):
 
         if len(self.right_hand_summary) > 0:
 
-            self.show_hand_summary(hand_type, self.right_hand_summary, self.right_hand_distance)
+            self.show_hand_summary(hand_type, self.right_hand_summary, self.right_hand_distance,
+                                   self.right_hand_error_summary)
 
         else:
             print(f'No measurements found for {hand_type} Hand\n')
@@ -133,6 +143,7 @@ class CaliperAnalyser(object):
         for f in files:
 
             hand_measurements = pd.read_csv(f)
+            hand_measurements.Name = get_image_name_from_hand_measurement_file(f)
 
             if len(hand_measurements) > 0:
 
@@ -151,6 +162,7 @@ class CaliperAnalyser(object):
 
         return (left_measurements, right_measurements)
 
+    @beartype
     def combine_measurements(self, hand_measures: list[pd.DataFrame]) -> pd.DataFrame:
 
         if len(hand_measures) == 0:
@@ -158,18 +170,48 @@ class CaliperAnalyser(object):
 
         measure1 = hand_measures[0]
 
-        measure1 = measure1.rename(columns={'EUCLIDEAN_DISTANCE': ('ED_0')})
+        measure1 = measure1.rename(columns={'EUCLIDEAN_DISTANCE': (f'ED_{measure1.Name}')})
 
         for i in range(1, len(hand_measures)):
             measure_i = hand_measures[i][["LANDMARK1_ID", "LANDMARK2_ID", "EUCLIDEAN_DISTANCE"]]
 
-            measure_i = measure_i.rename(columns={'EUCLIDEAN_DISTANCE': (f'ED_{i}')})
+            measure_i = measure_i.rename(columns={'EUCLIDEAN_DISTANCE': (f'ED_{hand_measures[i].Name}')})
 
             measure1 = pd.merge(measure1, measure_i, on=["LANDMARK1_ID", "LANDMARK2_ID"], how='inner')
 
         return measure1
 
-    def summarise_measurements(self, merged_measurements: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def summarise_measurement_errors(self, hand_measures: list[pd.DataFrame]) -> pd.DataFrame:
+
+        if len(hand_measures) == 0:
+            return pd.DataFrame()
+
+        error_summary = None
+
+        for i in range(len(hand_measures)):
+
+            measure = hand_measures[i]
+
+            total_abs_error = np.round(measure['ERROR'].abs().mean(), 3)
+
+            total_pct_error = np.round(measure['ERROR_PCT'].abs().mean(), 3)
+
+            error_measure = pd.DataFrame(
+                {'IMAGE': [f'ED_{measure.Name}'], 'AVG_ERROR': [total_abs_error], 'AVG_PCT_ERROR': [total_pct_error]})
+
+            if error_summary is None:
+                error_summary = error_measure
+            else:
+                error_summary = pd.concat([error_summary, error_measure])
+
+        error_summary = error_summary.reset_index(drop=True)
+
+        error_summary = error_summary.sort_values(by=['AVG_ERROR', 'AVG_PCT_ERROR'])
+
+        return error_summary
+
+    def summarise_measurements(self, merged_measurements: pd.DataFrame, error_summary: pd.DataFrame) -> tuple[
+        pd.DataFrame, pd.DataFrame]:
 
         if len(merged_measurements) == 0:
             return (pd.DataFrame(), pd.DataFrame())
@@ -214,6 +256,9 @@ class CaliperAnalyser(object):
 
         hand_summary = hand_summary[summary_columns]
 
+        # put distances in their sorted order of error
+        distances = distances.loc[:, error_summary['IMAGE']]
+
         # add physical distance measurements distance data frame
         distances["MEAN_DISTANCE"] = hand_summary["EUCLIDEAN_DISTANCE_MEAN"]
         distances["PHYSICAL_DISTANCE"] = hand_summary["PHYSICAL_DISTANCE"]
@@ -221,7 +266,8 @@ class CaliperAnalyser(object):
         return (hand_summary, distances)
 
     @beartype
-    def show_hand_summary(self, hand_type, hand_summary: pd.DataFrame, hand_distances: pd.DataFrame) -> None:
+    def show_hand_summary(self, hand_type, hand_summary: pd.DataFrame, hand_distances: pd.DataFrame,
+                          error_summary: pd.DataFrame) -> None:
 
         sample_size = max(0, len(hand_distances.columns) - 2)
 
@@ -233,6 +279,9 @@ class CaliperAnalyser(object):
 
         hand_distances.plot(kind="bar", figsize=(15, 7))
         hand_distances.plot(figsize=(15, 7))
+
+        print(f'\nLandmark Error Summary:')
+        display(error_summary)
 
         plt.title(f'{hand_type} Landmark Measurements Across {sample_size} images')
 
