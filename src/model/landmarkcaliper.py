@@ -27,6 +27,10 @@ from distancecalculator import DistanceCalculator
 from scalingdistancecalculator import ScalingDistanceCalculator
 from worlddistancecalculator import WorldDistanceCalculator
 
+MARGIN = 10  # pixels
+FONT_SIZE = 1
+FONT_THICKNESS = 1
+HANDEDNESS_TEXT_COLOR = (88, 205, 54)  # vibrant green
 
 class LandmarkCaliper(object):
 
@@ -129,14 +133,19 @@ class LandmarkCaliper(object):
     @beartype
     def show_measurement_details(self, show_hand=True) -> None:
 
-        hand_type = self.measurement_model.get_hand_type()
-        image_name = get_file_name(self.image_file)
-        max_length, max_landmarks = self.measurement_model.get_max_hand_length()
-        hand_measurements = self.get_hand_measurements()
+        hand_type                   = self.measurement_model.get_hand_type()
+        image_name                  = get_file_name(self.image_file)
+        max_length, max_landmarks   = self.measurement_model.get_max_hand_length()
+        hand_measurements           = self.get_hand_measurements()
+        hand_distances              = self.get_measurement_distances(hand_measurements)
+        has_accuracy, accuracy      = self.get_measurement_accuracy(hand_measurements)
+
+        accuracy_text = f'{accuracy}%' if has_accuracy else 'Not Available'
 
         print(f'**** Landmark measurements for {image_name} (cm) ****\n')
-        print(
-            f'Hand Type: {hand_type}, Length: {round(max_length, 2)} cm b/w {max_landmarks[0]} to {max_landmarks[1]}\n')
+        print(f'Hand Type:      {hand_type}')
+        print(f'Hand Length:    {round(max_length, 2)}cm ({max_landmarks[0]} to {max_landmarks[1]})')
+        print(f'Accuracy:       {accuracy_text}\n')
 
         self.show_hand_coordinates_image()
 
@@ -144,12 +153,39 @@ class LandmarkCaliper(object):
 
         display(hand_measurements)
 
+        hand_distances.plot(kind="bar", figsize=(15, 7))
+        hand_distances.plot(figsize=(15, 7))
+
+        plt.title(f'{hand_type} Hand Landmark Measurements')
+        plt.show();
+
         if self.measurement_files is not None:
             print(f'\n1. Hand Measurement File: {self.measurement_files[0]} \n')
             print(f'2. Landmark Measurement File: {self.measurement_files[1]} \n')
             print(f'3. Coordinates Image File: {self.measurement_files[2]} \n')
             print(f'4. Contour Image File: {self.measurement_files[3]}\n')
-            print(f'4. Landmarks Image File: {self.measurement_files[3]}\n')
+            print(f'5. Landmarks Image File: {self.measurement_files[3]}\n')
+
+    @beartype
+    def get_measurement_accuracy(self, hand_measurements : pd.DataFrame) -> tuple[bool, float]:
+
+        has_accuracy    = False
+        accuracy        = 0.0
+
+        if np.sum(hand_measurements['PHYSICAL_DISTANCE'] > 0):
+            has_accuracy    = True
+            accuracy        = round((100. - hand_measurements['ERROR_PCT'].abs().mean()), 2)
+
+        return (has_accuracy, accuracy)
+
+
+    @beartype
+    def get_measurement_distances(self, hand_measurements : pd.DataFrame) -> pd.DataFrame:
+
+        distances = hand_measurements.loc[:, ['EUCLIDEAN_DISTANCE', 'PHYSICAL_DISTANCE']]
+
+        return distances
+
 
     @beartype
     def show_hand_coordinates_image(self, show_pixel_distance=False, fig_size=(10, 15)) -> None:
@@ -163,10 +199,9 @@ class LandmarkCaliper(object):
 
         plt.figure(figsize=fig_size)
         plt.imshow(image)
-        plt.title(
-            f'Landmark measurements for {image_name} (cm): {hand_type} Hand, Length: {round(max_length, 1)} cm b/w {max_landmarks[0]} to {max_landmarks[1]}')
+        plt.title(f'Landmark measurements for {image_name} (cm): {hand_type} Hand, Length: {round(max_length, 1)}cm')
 
-        plt.show()
+        plt.show();
 
         plt.close()
 
@@ -328,6 +363,7 @@ class LandmarkCaliper(object):
     @beartype
     def save_landmark_display_image(self, file_name: str) -> None:
         image = self.landmark_model.draw_landmark_annotations_on_image(self.measurement_model.image, self.measurement_model.model_result)
+        image = self.draw_handedness_on_image(image,self.measurement_model.model_result)
         self.draw_landmark_Id(image)
         img = Image.fromarray(image)
         img.save(file_name)
@@ -385,3 +421,20 @@ class LandmarkCaliper(object):
             cv2.putText(image, text, (x, y), cv2.FONT_HERSHEY_DUPLEX, distance_font_size, distance_color, 1, cv2.LINE_AA)
 
         return image
+
+    def draw_handedness_on_image(self, image, detection_result):
+        annotated_image = np.copy(image)
+        hand_landmarks = detection_result.hand_landmarks[0]
+        handedness = detection_result.handedness[0]
+
+        height, width, _ = annotated_image.shape
+        x_coordinates = [landmark.x for landmark in hand_landmarks]
+        y_coordinates = [landmark.y for landmark in hand_landmarks]
+        text_x = int(max(x_coordinates) * width)
+        text_y = int(min(y_coordinates) * height) - MARGIN
+
+        handedness = handedness[0].category_name
+        cv2.putText(annotated_image, f"{handedness}",
+                    (text_x, text_y), cv2.FONT_HERSHEY_DUPLEX,
+                    FONT_SIZE, HANDEDNESS_TEXT_COLOR, FONT_THICKNESS, cv2.LINE_AA)
+        return annotated_image

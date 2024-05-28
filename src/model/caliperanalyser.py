@@ -271,21 +271,44 @@ class CaliperAnalyser(object):
 
         sample_size = max(0, len(hand_distances.columns) - 2)
 
-        print(f'Measurement Summary for {hand_type} Hand for total samples {sample_size}\n')
+        has_accuracy, accuracy = self.get_accuracy(hand_summary, error_summary)
 
-        print(f'Mean Landmark Measurements:\n')
+        accuracy_text = f'{accuracy}%' if has_accuracy else 'Not Available'
+
+        print(f'*** Measurement Summary for {hand_type} Hand ***\n')
+
+        print(f'Total Samples:      {sample_size}')
+        print(f'Average Accuracy:   {accuracy_text}\n')
+
+        print(f'** Average Landmark Measurements **\n')
 
         display(hand_summary)
 
         hand_distances.plot(kind="bar", figsize=(15, 7))
         hand_distances.plot(figsize=(15, 7))
 
-        print(f'\nLandmark Error Summary:')
+        print(f'\n**Landmark Error Summary**')
+        
         display(error_summary)
 
-        plt.title(f'{hand_type} Landmark Measurements Across {sample_size} images')
+        plt.title(f'{hand_type} Hand Landmark Measurements Across {sample_size} images')
 
-        plt.show()
+        plt.show();
+
+    @beartype
+    def get_accuracy(self, hand_summary : pd.DataFrame, error_summary : pd.DataFrame) -> tuple[bool, float]:
+
+        has_accuracy    = False
+        accuracy        = 0.0
+
+        physical_measurements = hand_summary['PHYSICAL_DISTANCE']
+
+        if np.sum(physical_measurements) > 0:
+            has_accuracy = True
+            accuracy = round(100 - error_summary['AVG_PCT_ERROR'].abs().mean(), 2)
+
+        return (has_accuracy, accuracy)
+
 
     @beartype
     def save_measurements(self) -> tuple[str, str]:
